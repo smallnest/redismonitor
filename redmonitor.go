@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"strconv"
 	"time"
 
 	xxhashasm "github.com/cespare/xxhash"
@@ -65,6 +66,8 @@ func main() {
 		line := make([]byte, len(data))
 		copy(line, data)
 		buf.Reset()
+
+		// +1560423135.249655 [0 [::1]:57458] "set" "a\r\nb" "123\r\n456"
 		cmd := bytes.Split(line, []byte{' '})
 		if len(cmd) == 0 {
 			continue
@@ -72,9 +75,20 @@ func main() {
 		if cmd[0][0] != '+' {
 			continue
 		}
+
+		// [0 [::1]:57458] "set" "a\r\nb" "123\r\n456"
 		cmd = cmd[1:]
+
+		// "set" "a\r\nb" "123\r\n456"
+		if cmd[0][0] == '[' {
+			cmd = cmd[2:]
+		}
+
 		for i, f := range cmd {
-			cmd[i] = bytes.Trim(f, "\"")
+			s, err := strconv.Unquote(string(f))
+			if err == nil {
+				cmd[i] = []byte(s)
+			}
 		}
 
 		if string(cmd[0]) == "MONITOR" {
